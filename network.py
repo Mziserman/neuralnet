@@ -14,14 +14,6 @@ class Network:
     def connect(self):
         for i in range(0, len(self.layers) - 1):
             self.layers[i].connect(self.layers[i + 1])
-            
-    def input_data(self, data):
-        self.data = data
-        
-    def predict(self, data):
-        for datum in data:
-            for i in range(0, len(datum)):
-                feature = datum[i]
     
     def feed_forward(self, input):
         i = 0
