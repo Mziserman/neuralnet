@@ -8,6 +8,9 @@ class Neuron:
             "backward": []
         }
         self.data = 0
+
+    def __str__(self):
+        return "data: {0}, forward connections: {1}, backward connection: {2}".format(self.data, len(self.connections["forward"]), len(self.connections["backward"]))
         
     def connect(self, layer):
         for neuron in layer.neurons:
