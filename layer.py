@@ -8,7 +8,6 @@ class Layer:
     def __init__(self, neuron_count):
         self.neurons = []
         for i in range(0, neuron_count):
-            print(i)
             self.neurons.append(Neuron())
             
     def connect(self, layer):
