@@ -18,11 +18,14 @@ class Network:
             self.layers[i].connect(self.layers[i + 1])
     
     def feed_forward(self, input):
+        # Clear previous data before forward pass
+        self.remove_data()
+
         i = 0
         for neuron in self.layers[0].neurons:
             neuron.feed_forward(input[i])
             i += 1
-            
+
         for layer in self.layers[1:]:
             for neuron in layer.neurons:
                 neuron.feed_forward(neuron.data)
@@ -37,36 +40,46 @@ class Network:
         # calculate error terms for output
         i = 0
         for neuron in self.layers[-1].neurons:
-            error = targets[i] - neuron.sigmoid(neuron.data)
-            neuron.delta = neuron.derivative_sigmoid(neuron.sigmoid(neuron.data)) * error
+            error = targets[i] - neuron.output
+            neuron.delta = neuron.derivative_sigmoid(neuron.output) * error
             i += 1
 
         # calculate error terms for hiddens
-        for i in range(len(self.layers)):
-            for neuron in self.layers[-(i+1)].neurons:
+        # Go from second-to-last layer backwards to first hidden layer
+        for i in range(len(self.layers) - 2, 0, -1):
+            for neuron in self.layers[i].neurons:
                 error = 0
-                for connection in neuron.connections["backward"]:
-                    error = error + neuron.delta * connection["weight"]
-                for connection in neuron.connections["backward"]:
-                    connection["neuron"].delta = neuron.derivative_sigmoid(neuron.sigmoid(neuron.data)) * error
-        
-        for i in range(len(self.layers)):
-            for neuron in self.layers[-(i+1)].neurons:
-                for connection in neuron.connections["backward"]:
-                    change = neuron.delta * neuron.sigmoid(connection["neuron"].data)
-                    new_weight = connection["weight"] + N * change + M * neuron.change
+                # Sum errors from all neurons in the NEXT layer (forward connections)
+                for connection in neuron.connections["forward"]:
+                    error += connection["neuron"].delta * connection["weight"]
+                # Set delta on CURRENT neuron
+                neuron.delta = neuron.derivative_sigmoid(neuron.output) * error
+
+        # Update weights - iterate through all layers (except output) and update forward connections
+        for i in range(len(self.layers) - 1):
+            for neuron in self.layers[i].neurons:
+                for connection in neuron.connections["forward"]:
+                    # weight update: destination_delta * source_output
+                    change = connection["neuron"].delta * neuron.output
+
+                    # Initialize change in connection if not exists
+                    if "change" not in connection:
+                        connection["change"] = 0
+
+                    new_weight = connection["weight"] + N * change + M * connection["change"]
                     connection["weight"] = new_weight
-                    neuron.change = change
-                    print(new_weight)
-                
-                    for connection in connection["neuron"].connections["forward"]:
-                        if connection["neuron"] == neuron:
-                            connection["weight"] = new_weight
+                    connection["change"] = change
+
+                    # Update the corresponding backward connection to keep in sync
+                    for backward_conn in connection["neuron"].connections["backward"]:
+                        if backward_conn["neuron"] == neuron:
+                            backward_conn["weight"] = new_weight
+                            backward_conn["change"] = change
                 
         # calculate error
         error = 0.0
         for k in range(len(targets)):
-            error = error + 0.5*(targets[k] - sigmoid(self.layers[-1].neurons[k].data))**2
+            error = error + 0.5*(targets[k] - self.layers[-1].neurons[k].output)**2
         
         self.remove_data()
         
@@ -76,6 +89,7 @@ class Network:
         for layer in self.layers:
             for neuron in layer.neurons:
                 neuron.data = 0
+                neuron.output = 0
     
     def train(self, patterns, iterations=1000, N=0.5, M=0.1):
         # N: learning rate

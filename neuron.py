@@ -8,6 +8,7 @@ class Neuron:
             "backward": []
         }
         self.data = 0
+        self.output = 0  # Store activated output for backprop
         self.change = 0
 
     def __str__(self):
@@ -26,10 +27,19 @@ class Neuron:
             })
 
     def feed_forward(self, input):
+        if self.connections["backward"]:
+            # Hidden/output layers: sum weighted inputs, then sigmoid
+            weighted_sum = 0
+            for connection in self.connections["backward"]:
+                weighted_sum += connection["neuron"].output * connection["weight"]
+            self.output = self.sigmoid(weighted_sum)
+        else:
+            # Input layer: no backward connections, just store the input
+            self.output = input
+
+        # Pass the activated value to all forward connections
         for connection in self.connections["forward"]:
-            forward_data = self.sigmoid(input * connection["weight"])
-            ##backward_connection = next(x for x in connection["neuron"].connections["backward"] if self == x["neuron"])
-            connection["neuron"].data += forward_data
+            connection["neuron"].data += self.output
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
